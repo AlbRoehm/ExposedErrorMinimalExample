@@ -52,68 +52,68 @@ class DatabaseTest {
         getPSQLVersion()
         createEntry()
     }
-}
 
-private suspend fun getPSQLVersion() = dbQuery {
-    exec("SELECT VERSION();") { it.next(); it.getString(1) }
-}
-
-private suspend fun createEntry() = dbQuery {
-    RandomEntity.new { test = UUID.randomUUID().toString() }
-}
-
-suspend fun <T> dbQuery(dispatcher: CoroutineDispatcher = Dispatchers.IO, block: suspend Transaction.() -> T): T =
-    newSuspendedTransaction(
-        dispatcher,
-        transactionIsolation = Connection.TRANSACTION_SERIALIZABLE
-    ) {
-
-        SchemaUtils.setSchema(Schema(DATABASE_SCHEMA, DATABASE_USER))
-
-        block()
+    private suspend fun getPSQLVersion() = dbQuery {
+        exec("SELECT VERSION();") { it.next(); it.getString(1) }
     }
 
-class DatabaseMock {
-
-    private val isolationLevel = "TRANSACTION_SERIALIZABLE"
-    private val driverName = "org.postgresql.Driver"
-
-    init {
-        setupDatasource()
+    private suspend fun createEntry() = dbQuery {
+        RandomEntity.new { test = UUID.randomUUID().toString() }
     }
 
-    private fun setupDatasource() {
-        val dataSource = hikari()
+    suspend fun <T> dbQuery(dispatcher: CoroutineDispatcher = Dispatchers.IO, block: suspend Transaction.() -> T): T =
+        newSuspendedTransaction(
+            dispatcher,
+            transactionIsolation = Connection.TRANSACTION_SERIALIZABLE
+        ) {
+            block()
+        }
 
-        Database.connect(dataSource)
-        transaction(Connection.TRANSACTION_SERIALIZABLE, 1) {
-            // transaction {
-            val schema = Schema(DATABASE_SCHEMA, DATABASE_USER)
-            SchemaUtils.createSchema(schema)
-            SchemaUtils.setSchema(schema)
-            SchemaUtils.create(RandomTable)
+    class DatabaseMock {
+
+        private val isolationLevel = "TRANSACTION_SERIALIZABLE"
+        private val driverName = "org.postgresql.Driver"
+
+        init {
+            setupDatasource()
+        }
+
+        private fun setupDatasource() {
+            val dataSource = hikari()
+
+            Database.connect(dataSource)
+            transaction(Connection.TRANSACTION_SERIALIZABLE, 1) {// fails immendiately with PSQL-Exception
+                // transaction { // Fails after 31s when connections are recreated, after pool timeout
+                val schema = Schema(DATABASE_SCHEMA, DATABASE_USER)
+                SchemaUtils.createSchema(schema)
+                SchemaUtils.setSchema(schema)
+                SchemaUtils.create(RandomTable)
+            }
+        }
+
+        private fun hikari(): HikariDataSource {
+            val hikariConfig = HikariConfig().apply {
+                driverClassName = driverName
+                jdbcUrl = DATABASE_URL
+                schema = DATABASE_SCHEMA
+                username = DATABASE_USER
+                password = DATABASE_PASSWORD
+                maximumPoolSize = 5
+                isAutoCommit = false
+                maxLifetime = 30020
+                transactionIsolation = isolationLevel
+            }
+            hikariConfig.validate()
+
+            return HikariDataSource(hikariConfig)
+        }
+
+        companion object {
+
+            const val DATABASE_USER = "hg_kotlin"
+            const val DATABASE_SCHEMA = "test_schema"
+            const val DATABASE_PASSWORD = "super_secret"
+            const val DATABASE_URL = "jdbc:postgresql://localhost:5432/hg_kotlin_test"
         }
     }
-
-    private fun hikari(): HikariDataSource {
-        val hikariConfig = HikariConfig().apply {
-            driverClassName = driverName
-            jdbcUrl = DATABASE_URL
-            // schema = DATABASE_SCHEMA << !! If schema is not set there is not error happening
-            username = DATABASE_USER
-            password = DATABASE_PASSWORD
-            maximumPoolSize = 5
-            isAutoCommit = false
-            maxLifetime = 30020
-            transactionIsolation = isolationLevel
-        }
-        hikariConfig.validate()
-
-        return HikariDataSource(hikariConfig)
-    }
 }
-
-const val DATABASE_USER = "hg_kotlin"
-const val DATABASE_SCHEMA = "test_schema"
-const val DATABASE_PASSWORD = "super_secret"
-const val DATABASE_URL = "jdbc:postgresql://localhost:5432/hg_kotlin_test"
