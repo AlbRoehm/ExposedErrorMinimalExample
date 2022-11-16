@@ -50,13 +50,8 @@ dependencies {
     implementation("org.postgresql:postgresql:42.5.0")
 
     implementation("ch.qos.logback:logback-classic:1.4.4")
-    implementation("net.logstash.logback:logstash-logback-encoder:7.2")
 
-    testImplementation("io.ktor:ktor-server-tests:$ktorVersion")
-    testImplementation("io.ktor:ktor-client-mock:$ktorVersion")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4")
-    testImplementation("org.assertj:assertj-core:3.23.1")
-    testImplementation("io.mockk:mockk:1.12.8")
     testImplementation("org.junit.jupiter:junit-jupiter-api:$junitVersion")
     testImplementation("org.junit.jupiter:junit-jupiter-params:$junitVersion")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junitVersion")
