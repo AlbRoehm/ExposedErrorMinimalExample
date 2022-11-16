@@ -41,18 +41,17 @@ class DatabaseTest {
 
     @Test
     fun `Create a new Connection after it was closed, PSQLException`() = testCoroutine {
+
         val db = DatabaseMock()
 
-        // getPSQLVersion()
+        getPSQLVersion()
         createEntry()
-
+        //
         delay(TimeUnit.SECONDS.toMillis(31))
-
-        // getPSQLVersion()
+        //
+        getPSQLVersion()
         createEntry()
     }
-
-
 }
 
 private suspend fun getPSQLVersion() = dbQuery {
@@ -63,12 +62,16 @@ private suspend fun createEntry() = dbQuery {
     RandomEntity.new { test = UUID.randomUUID().toString() }
 }
 
-
 suspend fun <T> dbQuery(dispatcher: CoroutineDispatcher = Dispatchers.IO, block: suspend Transaction.() -> T): T =
     newSuspendedTransaction(
         dispatcher,
         transactionIsolation = Connection.TRANSACTION_SERIALIZABLE
-    ) { block() }
+    ) {
+
+        SchemaUtils.setSchema(Schema(DATABASE_SCHEMA, DATABASE_USER))
+
+        block()
+    }
 
 class DatabaseMock {
 
@@ -81,9 +84,10 @@ class DatabaseMock {
 
     private fun setupDatasource() {
         val dataSource = hikari()
+
         Database.connect(dataSource)
-        // transaction(Connection.TRANSACTION_SERIALIZABLE, 1) { // fails immendiately with PSQL-Exception
-        transaction { // Fails after 31s when connections are recreated, after pool timeout
+        transaction(Connection.TRANSACTION_SERIALIZABLE, 1) {
+            // transaction {
             val schema = Schema(DATABASE_SCHEMA, DATABASE_USER)
             SchemaUtils.createSchema(schema)
             SchemaUtils.setSchema(schema)
@@ -95,7 +99,7 @@ class DatabaseMock {
         val hikariConfig = HikariConfig().apply {
             driverClassName = driverName
             jdbcUrl = DATABASE_URL
-            schema = DATABASE_SCHEMA
+            // schema = DATABASE_SCHEMA << !! If schema is not set there is not error happening
             username = DATABASE_USER
             password = DATABASE_PASSWORD
             maximumPoolSize = 5
