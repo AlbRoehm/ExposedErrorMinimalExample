@@ -1,5 +1,10 @@
 Minimal example for better discussion of this issue https://github.com/JetBrains/Exposed/issues/1575
 
+Java: `temurin-11.0.17`
+
+DBMS: PostgreSQL (ver. 13.3 (Debian 13.3-1.pgdg100+1))
+
+
 Output of DatabaseTest.`Create a new Connection after it was closed, PSQLException`()
 
 ```
@@ -8,7 +13,7 @@ BUILD SUCCESSFUL in 1s
 1 actionable task: 1 executed
 > Task :processResources NO-SOURCE
 > Task :processTestResources NO-SOURCE
-> Task :compileKotlin
+> Task :compileKotlin:;
 > Task :compileJava NO-SOURCE
 > Task :classes UP-TO-DATE
 > Task :jar UP-TO-DATE
